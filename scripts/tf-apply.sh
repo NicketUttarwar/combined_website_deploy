@@ -11,8 +11,9 @@ Usage: $(basename "$0") [options to terraform apply...]
 
 Apply changes. Loads config/aws.env when present.
 
-For a new stack, run ./scripts/tf-apply-phase1.sh first (add ACM DNS CNAMEs, then
-./scripts/check-acm-dns.sh), then use this script to finish — see README.
+For a new stack, run ./scripts/tf-apply-phase1.sh first (add ACM DNS CNAMEs, wait until ACM
+shows Issued — optional ./scripts/check-acm-dns.sh for the console link), then use this script
+to finish — see README.
 
 Examples:
   $(basename "$0")

@@ -17,8 +17,9 @@ First-time deploy (before ACM DNS validation):
   Creates only: S3 bucket + public access block, ACM certificate (Pending validation),
   CloudFront Origin Access Control.
 
-  Stops here on purpose — you add ACM validation CNAMEs at your DNS host next, then run
-  ./scripts/check-acm-dns.sh and finally ./scripts/tf-apply.sh to finish (validation + CloudFront).
+  Stops here on purpose — you add ACM validation CNAMEs at your DNS host next, wait until ACM
+  shows Issued (see AWS Console us-east-1; optional ./scripts/check-acm-dns.sh for the link), then
+  ./scripts/tf-apply.sh to finish (validation + CloudFront).
 
 Do not use this if you already completed a full apply; use ./scripts/tf-apply.sh for routine updates.
 
@@ -40,4 +41,4 @@ terraform_common_exec apply \
   -target=aws_acm_certificate.site \
   -target=aws_cloudfront_origin_access_control.site \
   "$@" &&
-  tf_log "Phase 1 finished. Next: add ACM validation CNAMEs (see README Step 8), then ./scripts/check-acm-dns.sh, then ./scripts/tf-apply.sh"
+  tf_log "Phase 1 finished. Next: add ACM validation CNAMEs (see README Step 8), wait until ACM is Issued (console or ./scripts/check-acm-dns.sh), then ./scripts/tf-apply.sh"

@@ -264,22 +264,17 @@ After saving at Network Solutions, **do not** stare at Terraform — use **Step 
 
 ---
 
-### Step 9 — Check ACM status and DNS (`check-acm-dns.sh`)
+### Step 9 — Check ACM status (`check-acm-dns.sh` or the console)
 
-Run this once (or occasionally) **after** you have added the ACM validation CNAMEs. It **does not** hang indefinitely: it runs a single check, prints **ACM status**, and optionally runs **`dig`** against public DNS if you have it installed.
+**After** you have added the ACM validation CNAMEs, open **AWS Certificate Manager** in **`us-east-1`** and refresh until the certificate shows **Issued** (this can take a few minutes).
+
+Optional: run the helper — it does **not** call AWS; it prints the console link and reminders:
 
 ```bash
 ./scripts/check-acm-dns.sh
 ```
 
-- **Exit 0** — certificate is **Issued**; proceed to **Step 10**.
-- **Exit non-zero** — still **Pending validation** or DNS not visible yet; fix typos at your DNS host, wait a few minutes, and **run the same command again** (no long timeout).
-
-Optional: wait with bounded retries (prints each attempt; you can stop with **Ctrl+C**):
-
-```bash
-./scripts/check-acm-dns.sh --wait
-```
+When the cert is **Issued**, proceed to **Step 10**.
 
 **Official AWS:** [DNS validation](https://docs.aws.amazon.com/acm/latest/userguide/dns-validation.html).
 
@@ -287,7 +282,7 @@ Optional: wait with bounded retries (prints each attempt; you can stop with **Ct
 
 ### Step 10 — Second Terraform apply (`tf-apply.sh`): CloudFront + validation
 
-When **Step 9** shows **Issued**, apply the rest of the stack (ACM validation resource, CloudFront, bucket policy). Terraform may wait briefly while it **confirms** validation — usually **seconds** if DNS is already correct.
+When **ACM** shows the certificate **Issued**, apply the rest of the stack (ACM validation resource, CloudFront, bucket policy). Terraform may wait briefly while it **confirms** validation — usually **seconds** if DNS is already correct.
 
 ```bash
 ./scripts/tf-apply.sh
@@ -339,7 +334,7 @@ Your bucket layout should mirror the **`combined/`** directory: upload so the bu
 With AWS CLI configured (same credentials as Terraform):
 
 ```bash
-aws s3 sync combined/ s3://YOUR_BUCKET_NAME/ --delete
+aws s3 sync combined/ s3://combined-personal-website-s3-bucket-nvu/ --delete
 ```
 
 Replace **`YOUR_BUCKET_NAME`** with the value from **`./scripts/tf-output.sh`** → **`s3_bucket_id`** (or **`-raw s3_bucket_id`**).
@@ -351,7 +346,7 @@ Replace **`YOUR_BUCKET_NAME`** with the value from **`./scripts/tf-output.sh`** 
 When you change files already cached at the edge, create an invalidation:
 
 ```bash
-aws cloudfront create-invalidation --distribution-id DIST_ID --paths "/*"
+aws cloudfront create-invalidation --distribution-id E3MF2QW17YDNP4 --paths "/*"
 ```
 
 Use **`cloudfront_distribution_id`** from **`./scripts/tf-output.sh`**. Narrower paths (e.g. `/index.html` or `/uttarwarart/index.html`) reduce invalidation scope if you prefer.
@@ -401,7 +396,7 @@ If validation fails for hours, double-check: **wrong DNS zone**, **typo** in the
 
 ### After certificates issue
 
-Keep monitoring **ACM** until the cert is **Issued** (or use **`./scripts/check-acm-dns.sh`**), then ensure **Step 11** site DNS is in place. Use **`./scripts/tf-output.sh`** whenever you need IDs, bucket name, or CloudFront domain name.
+Keep monitoring **ACM** until the cert is **Issued** (or run **`./scripts/check-acm-dns.sh`** for the console link), then ensure **Step 11** site DNS is in place. Use **`./scripts/tf-output.sh`** whenever you need IDs, bucket name, or CloudFront domain name.
 
 ---
 
@@ -420,7 +415,7 @@ Each run prints **`[script-name]`** lines to **stderr** (what is loading, the ex
 | `./scripts/tf-init.sh` | `terraform init` |
 | `./scripts/tf-plan.sh` | `terraform plan` |
 | `./scripts/tf-apply-phase1.sh` | **First `apply` on a new stack:** S3 + ACM certificate request + OAC only — **returns immediately** (no wait for DNS validation); see README Step 7 |
-| `./scripts/check-acm-dns.sh` | After ACM validation CNAMEs exist: prints ACM status and optional DNS checks; **one-shot** unless you pass **`--wait`** |
+| `./scripts/check-acm-dns.sh` | After ACM validation CNAMEs exist: prints the **ACM console** link and reminders (does not query AWS) |
 | `./scripts/tf-apply.sh` | Full **`terraform apply`** (use after phase 1 + DNS; creates CloudFront, validation, bucket policy) |
 | `./scripts/tf-destroy.sh` | `terraform destroy` |
 | `./scripts/destroy-stack.sh` | **Full teardown:** **`tf-plan.sh -destroy`** (saved plan) → confirm → **`tf-apply.sh`** plan file. Plan stored at **`terraform/.destroy.tfplan`** (gitignored). **`./scripts/destroy-stack.sh -y`** skips the confirmation prompt |
@@ -499,7 +494,7 @@ To run the site test alone with your own server: **`BASE=http://127.0.0.1:8080 p
 2. Create IAM access keys; put them in **`config/aws.env`** (**never commit**); set **`AWS_DEFAULT_REGION=us-east-1`**.  
 3. Copy **`config/terraform.tfvars.example`** → **`config/terraform.tfvars`**; set **unique `s3_bucket_name`** and **`domain_names`** if needed (defaults: **nicketuttarwar.com** + **www**).  
 4. **`./scripts/tf-init.sh`** → **`./scripts/tf-plan.sh`** → **`./scripts/tf-apply-phase1.sh`** (ends without waiting on DNS).  
-5. In **Network Solutions**, add **ACM validation** CNAMEs; run **`./scripts/check-acm-dns.sh`** until the cert is **Issued**; then **`./scripts/tf-apply.sh`** to create CloudFront and the rest.  
+5. In **Network Solutions**, add **ACM validation** CNAMEs; in **ACM** (us-east-1), wait until the cert is **Issued** (or run **`./scripts/check-acm-dns.sh`** for the console link); then **`./scripts/tf-apply.sh`** to create CloudFront and the rest.  
 6. In **Network Solutions**, add **website** CNAMEs (`www` → **`cloudfront_domain_name`**) and handle **apex** (forwarding or ALIAS-style).  
 7. **`aws s3 sync`** your **`combined/`** tree; **invalidate** CloudFront; test **HTTPS** in the browser.  
 8. To tear everything down: **`./scripts/destroy-stack.sh`** (or **`./scripts/tf-destroy.sh`**).
