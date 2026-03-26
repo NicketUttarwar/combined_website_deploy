@@ -31,7 +31,7 @@ if [[ -z "$TAG_VALUE" ]]; then
 fi
 # Matches terraform/variables.tf default project_name when state/outputs are unavailable.
 if [[ -z "$TAG_VALUE" ]]; then
-  TAG_VALUE="combined-site"
+  TAG_VALUE="website"
   tf_log "Using default TAG_VALUE=${TAG_VALUE}"
 else
   tf_log "TAG_VALUE=${TAG_VALUE}"

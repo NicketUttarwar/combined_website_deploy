@@ -1,6 +1,6 @@
-# Combined website deploy (Terraform + S3 + CloudFront)
+# Static website deploy (Terraform + S3 + CloudFront)
 
-This repository deploys a **single static site** in **one S3 bucket** with **two CloudFront distributions** (portfolio domain + art domain) and **TLS from AWS Certificate Manager**. **DNS stays at your registrar**—this guide uses **Network Solutions** as the example; the same record types apply at any DNS host.
+This repository deploys **one static website**: a **single S3 bucket**, **one CloudFront distribution**, and **TLS from AWS Certificate Manager** for **nicketuttarwar.com** with **apex and `www`** by default. Site files live under **`combined/`** in this repo (synced to the bucket root). **DNS stays at your registrar**—this guide uses **Network Solutions** as the example; the same record types apply at any DNS host.
 
 ---
 
@@ -14,9 +14,10 @@ This repository deploys a **single static site** in **one S3 bucket** with **two
 6. [End-to-end deployment (step by step)](#end-to-end-deployment-step-by-step)  
    - [Step 0 — Clone the repo and install tools](#step-0--clone-the-repo-and-install-tools)  
    - [Steps 1–4 — AWS credentials and Terraform config](#step-1--create-aws-access-keys-for-terraform-on-your-machine)  
-   - [Steps 5–7 — Terraform init, plan, first apply](#step-5--initialize-terraform)  
-   - [Steps 8–9 — Network Solutions: ACM validation + site DNS](#step-8--acm-dns-validation-at-network-solutions-required-for-https)  
-   - [Steps 10–12 — Content, invalidation, verify](#step-10--upload-your-static-files-to-s3)
+   - [Steps 5–6 — Terraform init and plan](#step-5--initialize-terraform)  
+   - [Steps 7–10 — Terraform: phase 1 apply, ACM DNS, check script, full apply](#step-7--first-terraform-apply-phase-1-s3--acm-request-no-dns-wait)  
+   - [Steps 11–12 — Network Solutions: site DNS + content](#step-11--point-your-site-dns-at-cloudfront-network-solutions)  
+   - [Steps 13–14 — Invalidate and verify](#step-13--invalidate-cloudfront-caches-after-uploads)
 7. [Network Solutions: detailed DNS guide](#network-solutions-detailed-dns-guide)
 8. [Quick reference: scripts](#quick-reference-scripts)
 9. [Troubleshooting](#troubleshooting-short)
@@ -29,8 +30,8 @@ This repository deploys a **single static site** in **one S3 bucket** with **two
 | Piece | Role |
 |--------|------|
 | **Your AWS account** | Hosts S3, ACM (TLS), CloudFront, IAM usage for Terraform |
-| **Network Solutions (or other DNS)** | You create **two kinds** of records: (1) **ACM validation** CNAMEs so AWS can issue certificates, (2) **website** CNAMEs so visitors reach CloudFront |
-| **This repo** | Terraform defines infrastructure; static files live under **`combined/`** |
+| **Network Solutions (or other DNS)** | You create **two kinds** of records: (1) **ACM validation** CNAMEs so AWS can issue the certificate, (2) **website** CNAMEs so visitors reach CloudFront |
+| **This repo** | Terraform defines one website’s infrastructure; static files live under **`combined/`** |
 
 You will log into **two different systems**: the **AWS console** (in **`us-east-1`**) and your **registrar/DNS** (e.g. Network Solutions). Nothing in this stack moves your DNS to Route 53 unless you choose to.
 
@@ -58,7 +59,7 @@ This stack does **not** put AWS credentials in Terraform variables; credentials 
 
 ## Regions: single region (us-east-1, N. Virginia)
 
-**Everything in this stack uses one region:** **`us-east-1`**. That includes the **S3 bucket**, **ACM** certificates, **CloudFront** distributions, **Origin Access Control**, and the bucket policy. **`var.aws_region`** defaults to **`us-east-1`** and is validated so it cannot be changed without editing `terraform/variables.tf`. Set **`AWS_DEFAULT_REGION=us-east-1`** in `config/aws.env` so the CLI matches Terraform.
+**Everything in this stack uses one region:** **`us-east-1`**. That includes the **S3 bucket**, **ACM** certificate, **CloudFront** distribution, **Origin Access Control**, and the bucket policy. **`var.aws_region`** defaults to **`us-east-1`** and is validated so it cannot be changed without editing `terraform/variables.tf`. Set **`AWS_DEFAULT_REGION=us-east-1`** in `config/aws.env` so the CLI matches Terraform.
 
 **Why `us-east-1`:** CloudFront viewer certificates must use public ACM certs in **`us-east-1`**. Placing the bucket and all other resources there avoids splitting the deployment across regions.
 
@@ -86,8 +87,8 @@ Before starting the numbered steps, confirm:
 |---|----------------|--------|
 | 1 | **AWS account** | Billing enabled if required; ability to create S3, ACM, CloudFront in **`us-east-1`** |
 | 2 | **IAM user (or role)** you can create access keys for | For personal projects, attaching **`AdministratorAccess`** is simplest; production teams often use a scoped custom policy |
-| 3 | **Domains you own** | Example defaults in `terraform/variables.tf`: portfolio + art zones (e.g. `nicketuttarwar.com`, `uttarwarart.com`) |
-| 4 | **DNS hosted at Network Solutions** | You can log in and edit **Advanced DNS** (or equivalent) for **each** domain |
+| 3 | **Domain** | Defaults in `terraform/variables.tf`: **`nicketuttarwar.com`** and **`www.nicketuttarwar.com`** as one site’s hostnames; override `domain_names` only if yours differ |
+| 4 | **DNS hosted at Network Solutions** | You can log in and edit **Advanced DNS** (or equivalent) for that zone |
 | 5 | **Globally unique S3 bucket name** | You will set **`s3_bucket_name`** in **`config/terraform.tfvars`** |
 | 6 | **Terraform** **`~> 1.14.7`** | Matches **`required_version`** in `terraform/versions.tf` |
 | 7 | **Optional: AWS CLI v2** | For `aws s3 sync` and CloudFront invalidations |
@@ -156,8 +157,8 @@ The helper scripts under **`scripts/`** automatically **source** `config/aws.env
 2. Edit **`config/terraform.tfvars`**:
 
    - **`s3_bucket_name`** — **globally unique** (lowercase, no spaces; follow [S3 bucket naming rules](https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html)).  
-   - **`portfolio_domain_names`** / **`art_domain_names`** — only if your hostnames differ from the defaults in **`terraform/variables.tf`** (list of strings; first entry is the certificate primary domain).  
-   - Optional: **`project_name`**, **`environment`**, **`common_tags`** — for resource names and AWS tags (see **`config/terraform.tfvars.example`**).
+   - **`domain_names`** — only if your hostnames differ from the defaults in **`terraform/variables.tf`** (list of strings for the **same** site; first entry is the ACM primary domain).  
+   - Optional: **`project_name`** (default **`website`**), **`environment`**, **`common_tags`** — for resource names and AWS tags (see **`config/terraform.tfvars.example`**).
 
 `config/terraform.tfvars` is **gitignored** (via **`*.tfvars`**) so environment-specific values stay local.
 
@@ -197,27 +198,32 @@ This runs **`terraform init`** in the **`terraform/`** directory with your envir
 ./scripts/tf-plan.sh
 ```
 
-Inspect the planned resources: S3 bucket, ACM certificates, CloudFront distributions, bucket policy, etc.
+Inspect the planned resources: S3 bucket, ACM certificate, CloudFront distribution, bucket policy, etc.
 
 ---
 
-### Step 7 — First `terraform apply` (creates certs and waits on DNS validation)
+### Step 7 — First Terraform apply (phase 1): S3 + ACM request — no DNS wait
+
+Use the **phase 1** script so Terraform **does not** sit on `aws_acm_certificate_validation` while you work in your DNS provider (Network Solutions). It creates the **S3 bucket**, **ACM certificate request**, and **CloudFront Origin Access Control**, then **exits**.
 
 ```bash
-./scripts/tf-apply.sh
+./scripts/tf-apply-phase1.sh
 ```
+
+Optional: **`./scripts/tf-apply-phase1.sh -auto-approve`** if you already reviewed a plan.
 
 **What to expect**
 
-- Terraform creates ACM certificate **requests** and then **waits** until **DNS validation** succeeds (`aws_acm_certificate_validation`). That can take **minutes to much longer** if the **validation CNAMEs** are not in DNS yet.
-- **Do not wait for a timeout if you already know what to do:** as soon as certificates appear in ACM as **Pending validation**, add the CNAME records (Step 8). You can read the exact names/values from the **[ACM console (us-east-1)](https://us-east-1.console.aws.amazon.com/acm/home?region=us-east-1#/certificates/list)** while **`apply` is still running.
-- If **`apply`** fails or times out before validation completes, finish **Step 8**, wait until both certificates show **Issued** in ACM, then run **`./scripts/tf-apply.sh`** again.
+- The command finishes shortly after AWS creates the certificate in **Pending validation** state.
+- You are **not** waiting for DNS propagation in this step — that happens **after** you add records (Step 8) and verify (Step 9).
+
+If you **already** have a full apply from an older workflow, routine updates use **`./scripts/tf-apply.sh`** as usual.
 
 ---
 
 ### Step 8 — ACM DNS validation at Network Solutions (required for HTTPS)
 
-Terraform creates **two** certificates (portfolio + art). Each needs **DNS validation** CNAMEs in the **correct DNS zone** (portfolio domain vs art domain).
+Terraform creates **one** ACM certificate covering **`domain_names`**. Add **DNS validation** CNAMEs in the DNS zone for those hostnames (e.g. **nicketuttarwar.com** when using the defaults).
 
 #### 8a — Get the exact CNAME records
 
@@ -235,8 +241,7 @@ For machine-readable copy:
 
 Relevant outputs (see **`terraform/outputs.tf`**):
 
-- **`acm_portfolio_validation_records`** — **`name`**, **`type`**, **`record`** for the **portfolio** zone.  
-- **`acm_art_validation_records`** — same for the **art** zone.
+- **`acm_validation_records`** — **`name`**, **`type`**, **`record`** for the DNS zone that hosts those hostnames.
 
 **Option B — AWS console** (same data as Terraform): **ACM** → **us-east-1** → open each certificate → **Domains** → copy each **CNAME name** and **CNAME value**.
 
@@ -247,26 +252,58 @@ Each hostname on the certificate (often **apex** + **`www`**) usually has **its 
 1. Log in to **[Network Solutions](https://www.networksolutions.com/)** with the account that controls the domain.
 2. Go to **My Account** → **My Domain Names** → select the domain → **DNS** / **Manage Advanced DNS** / **Advanced DNS** (labels vary).
 3. Add a **CNAME** row for **each** validation record AWS shows (see [Network Solutions: detailed DNS guide](#network-solutions-detailed-dns-guide) for Host vs Points-to).
-4. **Save**. Repeat for the **other** domain’s zone if you use two domains.
+4. **Save**.
 5. Wait for DNS propagation (often minutes; sometimes longer).
 
 **Official AWS:** [DNS validation](https://docs.aws.amazon.com/acm/latest/userguide/dns-validation.html).  
 **Network Solutions:** [Manage Advanced DNS records](https://www.networksolutions.com/support/how-to-manage-advanced-dns-records/).
 
-#### 8c — Confirm certificates are Issued in AWS
+#### 8c — Confirm records are saved (Issued comes next)
 
-1. Open **ACM** in **`us-east-1`**: [ACM us-east-1](https://us-east-1.console.aws.amazon.com/acm/home?region=us-east-1#/certificates/list).
-2. Each certificate should move from **Pending validation** to **Issued**.
-
-When both are **Issued**, run **`./scripts/tf-apply.sh`** again if anything failed earlier or CloudFront is still updating.
+After saving at Network Solutions, **do not** stare at Terraform — use **Step 9** to check whether ACM has picked up DNS yet.
 
 ---
 
-### Step 9 — Point your **site** DNS at CloudFront (Network Solutions)
+### Step 9 — Check ACM status and DNS (`check-acm-dns.sh`)
 
-This is **separate** from Step 8. Here you send **real visitors** to CloudFront using your distributions’ **`*.cloudfront.net`** domain names—not the ACM validation hostnames.
+Run this once (or occasionally) **after** you have added the ACM validation CNAMEs. It **does not** hang indefinitely: it runs a single check, prints **ACM status**, and optionally runs **`dig`** against public DNS if you have it installed.
 
-#### 9a — Get CloudFront target hostnames
+```bash
+./scripts/check-acm-dns.sh
+```
+
+- **Exit 0** — certificate is **Issued**; proceed to **Step 10**.
+- **Exit non-zero** — still **Pending validation** or DNS not visible yet; fix typos at your DNS host, wait a few minutes, and **run the same command again** (no long timeout).
+
+Optional: wait with bounded retries (prints each attempt; you can stop with **Ctrl+C**):
+
+```bash
+./scripts/check-acm-dns.sh --wait
+```
+
+**Official AWS:** [DNS validation](https://docs.aws.amazon.com/acm/latest/userguide/dns-validation.html).
+
+---
+
+### Step 10 — Second Terraform apply (`tf-apply.sh`): CloudFront + validation
+
+When **Step 9** shows **Issued**, apply the rest of the stack (ACM validation resource, CloudFront, bucket policy). Terraform may wait briefly while it **confirms** validation — usually **seconds** if DNS is already correct.
+
+```bash
+./scripts/tf-apply.sh
+```
+
+If this step fails, read the error, fix DNS or ACM if needed, then run **`./scripts/tf-apply.sh`** again.
+
+---
+
+### Step 11 — Point your **site** DNS at CloudFront (Network Solutions)
+
+This is **separate** from ACM validation (Steps 8–9). Here you send **real visitors** to CloudFront using the distribution’s **`*.cloudfront.net`** domain name—not the ACM validation hostnames.
+
+**Requires Step 10** so **`cloudfront_domain_name`** exists in **`./scripts/tf-output.sh`**.
+
+#### 11a — Get CloudFront target hostnames
 
 ```bash
 ./scripts/tf-output.sh
@@ -274,17 +311,15 @@ This is **separate** from Step 8. Here you send **real visitors** to CloudFront 
 
 Note:
 
-- **`cloudfront_portfolio_domain_name`** — e.g. `d111111abcdef8.cloudfront.net` (portfolio).  
-- **`cloudfront_art_domain_name`** — different distribution (art).
+- **`cloudfront_domain_name`** — e.g. `d111111abcdef8.cloudfront.net` (one CloudFront hostname for all paths on this site).
 
-#### 9b — Create **website** records
+#### 11b — Create **website** records
 
-You need **`www`** (and optionally apex) for each brand to point to the **correct** distribution.
+Point **`www`** (and optionally apex) at this distribution.
 
 | Goal | Typical record | Points to (value) |
 |------|----------------|-------------------|
-| Portfolio `www` | **CNAME** | **`cloudfront_portfolio_domain_name`** (full `dxxx.cloudfront.net`) |
-| Art `www` | **CNAME** | **`cloudfront_art_domain_name`** |
+| `www.nicketuttarwar.com` | **CNAME** | **`cloudfront_domain_name`** (full `dxxx.cloudfront.net`) |
 
 **Apex (bare domain, e.g. `example.com` without `www`)**
 
@@ -297,9 +332,9 @@ CloudFront does **not** give you a static IP for an **A** record. Common approac
 
 ---
 
-### Step 10 — Upload your static files to S3
+### Step 12 — Upload your static files to S3
 
-Your bucket layout should match this project’s **`combined/`** tree: portfolio files at the **bucket root**, art under **`uttarwarart/`** (or whatever you set as **`art_origin_path`** in `variables.tf` / overrides).
+Your bucket layout should mirror the **`combined/`** directory: upload so the bucket root matches that tree (same paths as locally under **`combined/`**).
 
 With AWS CLI configured (same credentials as Terraform):
 
@@ -311,43 +346,41 @@ Replace **`YOUR_BUCKET_NAME`** with the value from **`./scripts/tf-output.sh`** 
 
 ---
 
-### Step 11 — Invalidate CloudFront caches (after uploads)
+### Step 13 — Invalidate CloudFront caches (after uploads)
 
-When you change files already cached at the edge, create an invalidation per distribution:
+When you change files already cached at the edge, create an invalidation:
 
 ```bash
-aws cloudfront create-invalidation --distribution-id PORTFOLIO_DIST_ID --paths "/*"
-aws cloudfront create-invalidation --distribution-id ART_DIST_ID --paths "/*"
+aws cloudfront create-invalidation --distribution-id DIST_ID --paths "/*"
 ```
 
-Use **`cloudfront_portfolio_distribution_id`** and **`cloudfront_art_distribution_id`** from **`./scripts/tf-output.sh`**. Narrower paths (e.g. `/index.html`) reduce invalidation scope if you prefer.
+Use **`cloudfront_distribution_id`** from **`./scripts/tf-output.sh`**. Narrower paths (e.g. `/index.html` or `/uttarwarart/index.html`) reduce invalidation scope if you prefer.
 
 ---
 
-### Step 12 — Verify end-to-end
+### Step 14 — Verify end-to-end
 
-1. Open **`https://`** + your portfolio hostnames (apex and `www`)—portfolio content.  
-2. Open **`https://`** + your art hostnames—art content (served from the art origin path prefix in the bucket).  
-3. Try **http://** URLs—both should **redirect to HTTPS** as configured.  
-4. In the browser, inspect the certificate—issuer should be **Amazon** (ACM).
+1. Open **`https://nicketuttarwar.com/`** and **`https://www.nicketuttarwar.com/`** (or your **`domain_names`**) and spot-check important paths.  
+2. Try **http://** URLs—they should **redirect to HTTPS** as configured.  
+3. In the browser, inspect the certificate—issuer should be **Amazon** (ACM).
 
 ---
 
 ## Network Solutions: detailed DNS guide
 
-Use this section together with **Step 8** (validation) and **Step 9** (website traffic).
+Use this section together with **Step 8** (validation) and **Step 11** (website traffic).
 
 ### Accounts and access
 
-- You need a **Network Solutions account** that can manage **DNS** for **each** domain (portfolio and art if they are separate zones).
+- You need a **Network Solutions account** that can manage **DNS** for **nicketuttarwar.com** (or your chosen zone in **`domain_names`**).
 - If someone else bought the domain, ensure you have **login access** or ask them to add the records you send them.
 
 ### Two different jobs (do not mix them up)
 
 | Job | Purpose | Where the values come from | Record type |
 |-----|---------|----------------------------|-------------|
-| **A — ACM validation** | Prove to AWS that you control the domain so **TLS certificates** can issue | **`acm_*_validation_records`** or ACM console (**Pending validation**) | **CNAME** (usually) |
-| **B — Website traffic** | Send **visitors** to your **CloudFront** distributions | **`cloudfront_*_domain_name`** outputs | **CNAME** for `www`; apex uses forwarding or ALIAS-style feature |
+| **A — ACM validation** | Prove to AWS that you control the domain so **TLS** can issue | **`acm_validation_records`** or ACM console (**Pending validation**) | **CNAME** (usually) |
+| **B — Website traffic** | Send **visitors** to **CloudFront** | **`cloudfront_domain_name`** output | **CNAME** for `www`; apex uses forwarding or ALIAS-style feature |
 
 Using a **CloudFront** hostname in job A is wrong. Using **ACM validation** hostnames in job B is wrong.
 
@@ -359,16 +392,16 @@ Wording varies; you usually see fields similar to:
 - **Points to** / **Target** / **Value** — The **hostname** AWS gives (validation target ending in **`acm-validations.aws.`** or similar, or the **`dxxx.cloudfront.net`** for site CNAMEs).
 - **TTL** — Default (e.g. 1 hour) is fine.
 
-If validation fails for hours, double-check: **wrong zone** (art CNAME on portfolio domain), **typo** in the **value**, or **extra** `.` / missing dot—compare character-for-character with ACM.
+If validation fails for hours, double-check: **wrong DNS zone**, **typo** in the **value**, or **extra** `.` / missing dot—compare character-for-character with ACM.
 
 ### Apex (`@`) and `www`
 
-- **`www.example.com` → CloudFront:** add a **CNAME** for host **`www`** pointing to the **`cloudfront_*_domain_name`** for that site.  
+- **`www.example.com` → CloudFront:** add a **CNAME** for host **`www`** pointing to **`cloudfront_domain_name`**.  
 - **`example.com` (apex):** prefer **URL forwarding** (Network Solutions) from apex to **`https://www.example.com`**, or use an **ALIAS/ANAME**-style record if your product supports pointing the apex to a **hostname**.
 
 ### After certificates issue
 
-Keep monitoring **ACM** until both certs are **Issued**, then ensure **Step 9** DNS is in place. Use **`./scripts/tf-output.sh`** whenever you need IDs, bucket name, or CloudFront domain names.
+Keep monitoring **ACM** until the cert is **Issued** (or use **`./scripts/check-acm-dns.sh`**), then ensure **Step 11** site DNS is in place. Use **`./scripts/tf-output.sh`** whenever you need IDs, bucket name, or CloudFront domain name.
 
 ---
 
@@ -386,7 +419,9 @@ Each run prints **`[script-name]`** lines to **stderr** (what is loading, the ex
 |--------|---------|
 | `./scripts/tf-init.sh` | `terraform init` |
 | `./scripts/tf-plan.sh` | `terraform plan` |
-| `./scripts/tf-apply.sh` | `terraform apply` |
+| `./scripts/tf-apply-phase1.sh` | **First `apply` on a new stack:** S3 + ACM certificate request + OAC only — **returns immediately** (no wait for DNS validation); see README Step 7 |
+| `./scripts/check-acm-dns.sh` | After ACM validation CNAMEs exist: prints ACM status and optional DNS checks; **one-shot** unless you pass **`--wait`** |
+| `./scripts/tf-apply.sh` | Full **`terraform apply`** (use after phase 1 + DNS; creates CloudFront, validation, bucket policy) |
 | `./scripts/tf-destroy.sh` | `terraform destroy` |
 | `./scripts/destroy-stack.sh` | **Full teardown:** **`tf-plan.sh -destroy`** (saved plan) → confirm → **`tf-apply.sh`** plan file. Plan stored at **`terraform/.destroy.tfplan`** (gitignored). **`./scripts/destroy-stack.sh -y`** skips the confirmation prompt |
 | `./scripts/tf-output.sh` | `terraform output` (add **`-json`** or **`-raw NAME`**) |
@@ -443,9 +478,9 @@ To run the site test alone with your own server: **`BASE=http://127.0.0.1:8080 p
 
 | Issue | What to check |
 |--------|----------------|
-| Certificate stuck **Pending validation** | ACM validation CNAME **name and value** match Terraform/ACM exactly; correct **zone** (portfolio vs art domain). |
-| CloudFront **403** from S3 | Bucket policy allows both distribution ARNs; origins use **Origin Access Control**; objects uploaded under expected prefixes (art under **`art_origin_path`**). |
-| Wrong site on a hostname | DNS **CNAME** points to the **correct** `*.cloudfront.net` for that brand (two distributions = two targets). |
+| Certificate stuck **Pending validation** | ACM validation CNAME **name and value** match Terraform/ACM exactly; records are in the **correct** zone for **`domain_names`**. |
+| CloudFront **403** from S3 | Bucket policy allows the distribution ARN; origin uses **Origin Access Control**; objects exist at the paths you request under **`combined/`** after sync. |
+| Wrong site on a hostname | DNS **CNAME** for **`www`** points to **`cloudfront_domain_name`**. |
 | `terraform` or AWS errors about region | Use **`AWS_DEFAULT_REGION=us-east-1`** and **`aws_region = "us-east-1"`** (default). This stack is single-region. |
 | Wrong bucket name or missing **`s3_bucket_name`** in plans/applies | Edit **`config/terraform.tfvars`** (or **`TF_VAR_FILE`**). Ensure **`./scripts/tf-plan.sh`** shows the intended name. |
 | Need to **remove all** stack resources after a bad run | **`./scripts/destroy-stack.sh`** (uses **`tf-plan.sh`** + **`tf-apply.sh`**); confirm the plan, or **`./scripts/destroy-stack.sh -y`** if you accept the risk |
@@ -462,11 +497,13 @@ To run the site test alone with your own server: **`BASE=http://127.0.0.1:8080 p
 
 1. Clone repo; install Terraform (satisfies **`~> 1.14.7`** in `terraform/versions.tf`) and optional AWS CLI.  
 2. Create IAM access keys; put them in **`config/aws.env`** (**never commit**); set **`AWS_DEFAULT_REGION=us-east-1`**.  
-3. Copy **`config/terraform.tfvars.example`** → **`config/terraform.tfvars`**; set **unique `s3_bucket_name`** and correct **`portfolio_domain_names`** / **`art_domain_names`**.  
-4. **`./scripts/tf-init.sh`** → **`./scripts/tf-plan.sh`** → **`./scripts/tf-apply.sh`**.  
-5. In **Network Solutions**, add **ACM validation** CNAMEs for **both** domains; wait until certs are **Issued** in ACM (**us-east-1**); **`./scripts/tf-apply.sh`** again if needed.  
-6. In **Network Solutions**, add **website** CNAMEs (`www` → correct **`cloudfront_*_domain_name`**) and handle **apex** (forwarding or ALIAS-style).  
-7. **`aws s3 sync`** your **`combined/`** tree; **invalidate** both CloudFront distributions; test **HTTPS** in the browser.  
+3. Copy **`config/terraform.tfvars.example`** → **`config/terraform.tfvars`**; set **unique `s3_bucket_name`** and **`domain_names`** if needed (defaults: **nicketuttarwar.com** + **www**).  
+4. **`./scripts/tf-init.sh`** → **`./scripts/tf-plan.sh`** → **`./scripts/tf-apply-phase1.sh`** (ends without waiting on DNS).  
+5. In **Network Solutions**, add **ACM validation** CNAMEs; run **`./scripts/check-acm-dns.sh`** until the cert is **Issued**; then **`./scripts/tf-apply.sh`** to create CloudFront and the rest.  
+6. In **Network Solutions**, add **website** CNAMEs (`www` → **`cloudfront_domain_name`**) and handle **apex** (forwarding or ALIAS-style).  
+7. **`aws s3 sync`** your **`combined/`** tree; **invalidate** CloudFront; test **HTTPS** in the browser.  
 8. To tear everything down: **`./scripts/destroy-stack.sh`** (or **`./scripts/tf-destroy.sh`**).
+
+**Legacy state:** If you previously used older Terraform in this repo with differently named resources, see **`terraform/moved.tf`** for address migrations. After changing **`project_name`** from an earlier default (e.g. to **`website`**), run **`terraform plan`** and update tags in AWS if you rely on the **Project** tag for scripts such as **`list-tagged-resources.sh`**.
 
 You can add credentials and run the steps in order; no Certbot or manual TLS key generation is required for this AWS setup.

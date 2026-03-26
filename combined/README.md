@@ -150,7 +150,7 @@ nicketuttarwar.com/
 ├── art/index.html
 ├── contact/index.html
 ├── life/index.html
-├── uttarwarart/            # Interactive art portfolio (separate entry)
+├── uttarwarart/            # Interactive art portfolio (same site: /uttarwarart/ on nicketuttarwar.com)
 ├── css/style.css
 ├── js/portfolio-images.js  # Portfolio pages only
 ├── images/                 # Logo and page assets

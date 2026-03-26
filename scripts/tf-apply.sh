@@ -11,6 +11,9 @@ Usage: $(basename "$0") [options to terraform apply...]
 
 Apply changes. Loads config/aws.env when present.
 
+For a new stack, run ./scripts/tf-apply-phase1.sh first (add ACM DNS CNAMEs, then
+./scripts/check-acm-dns.sh), then use this script to finish — see README.
+
 Examples:
   $(basename "$0")
   $(basename "$0") -auto-approve
@@ -23,5 +26,5 @@ if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
   exit 0
 fi
 
-tf_log "→ terraform apply (create/update/destroy per plan or interactive)"
+tf_log "→ terraform apply (full stack; after phase 1 + DNS, completes validation and CloudFront)"
 terraform_common_exec apply "$@"

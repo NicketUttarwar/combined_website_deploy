@@ -1,11 +1,15 @@
 # Terraform
 .terraform/
+.terraform.tfstate.lock.info
 # Ignore state everywhere except the committed local backend file (terraform/backend.tf).
 *.tfstate
 !terraform/state/terraform.tfstate
 *.tfstate.*
 crash.log
 crash.*.log
+# Local overrides (uncomment if you use *_override.tf locally)
+# *_override.tf
+# *_override.tf.json
 # Local Terraform variable files (any path; includes config/terraform.tfvars — never commit secrets)
 *.tfvars
 !*.tfvars.example
@@ -26,3 +30,66 @@ config/aws.env
 .env
 .env.*
 !.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+venv/
+.venv/
+ENV/
+
+# Node / frontend tooling (e.g. uttarwarart scripts)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json.bak
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editors / IDEs
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Keys and local secrets (never commit)
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+*.p12
+
+# Misc local scratch
+*.tmp
+*.temp
+*.bak
+.cache/

@@ -1,4 +1,5 @@
 locals {
+  # One website; domain_names lists hostnames (e.g. apex + www) for ACM and CloudFront aliases.
   merged_tags = merge(
     {
       Project     = var.project_name
@@ -8,9 +9,6 @@ locals {
     var.common_tags,
   )
 
-  portfolio_primary_domain = var.portfolio_domain_names[0]
-  portfolio_san_domains    = length(var.portfolio_domain_names) > 1 ? slice(var.portfolio_domain_names, 1, length(var.portfolio_domain_names)) : []
-
-  art_primary_domain = var.art_domain_names[0]
-  art_san_domains    = length(var.art_domain_names) > 1 ? slice(var.art_domain_names, 1, length(var.art_domain_names)) : []
+  primary_domain = var.domain_names[0]
+  san_domains    = length(var.domain_names) > 1 ? slice(var.domain_names, 1, length(var.domain_names)) : []
 }

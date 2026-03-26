@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-# Serve the combined site: personal pages at / and the Uttarwar Art portfolio at /uttarwarart/
-# Builds uttarwarart/data/art-index.json from output_defaults, then starts a static server.
+# Serve this folder as a static site on http://127.0.0.1:<port> (default 8080).
+# Optional art index build for uttarwarart/ when Node is available.
+#
+# Usage:
+#   ./run_web.sh           # PORT=8080
+#   ./run_web.sh 9000      # port 9000
+#   PORT=3000 ./run_web.sh
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,11 +20,18 @@ else
   echo "Skipping art index build (no build script or node not found)." >&2
 fi
 
-PORT="${PORT:-8080}"
+if [[ -n "${1:-}" ]]; then
+  PORT="$1"
+elif [[ -n "${PORT:-}" ]]; then
+  PORT="$PORT"
+else
+  PORT=8080
+fi
+
 URL="http://127.0.0.1:${PORT}"
 
-echo "Combined site root: $ROOT"
-echo "Serving at $URL  (personal: $URL/  ·  art portfolio: $URL/uttarwarart/)"
+echo "Site root: $ROOT"
+echo "Serving at $URL"
 echo "Press Ctrl+C to stop."
 echo ""
 
@@ -29,4 +41,4 @@ elif command -v xdg-open >/dev/null 2>&1; then
   (sleep 0.5 && xdg-open "$URL") &
 fi
 
-exec python3 -m http.server "$PORT" --bind 127.0.0.1
+exec python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$ROOT"

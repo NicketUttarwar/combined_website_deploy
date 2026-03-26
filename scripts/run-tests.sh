@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run repository checks: shell syntax, Terraform fmt/validate, combined/ HTTP smoke test.
+# Run repository checks: shell syntax, Terraform fmt/validate, HTTP smoke test for site content (combined/).
 # Optional: RUN_TERRAFORM_PLAN=1 ./scripts/run-tests.sh — runs terraform plan (needs valid AWS credentials).
 set -euo pipefail
 
@@ -23,9 +23,9 @@ tf_log "Step 2/4: terraform fmt --check + validate (./scripts/tf-fmt-validate.sh
 export TF_VAR_s3_bucket_name="${TF_VAR_s3_bucket_name:-run-tests-placeholder-bucket}"
 ./scripts/tf-fmt-validate.sh --check
 
-tf_log "Step 3/4: combined/ static site — HTTP 200 checks (python3 test_site.py)"
+tf_log "Step 3/4: static site (combined/) — HTTP 200 checks (python3 test_site.py)"
 PORT="${TEST_HTTP_PORT:-8765}"
-tf_log "Starting temporary http.server on 127.0.0.1:${PORT} (serving combined/)"
+tf_log "Starting temporary http.server on 127.0.0.1:${PORT} (serving site tree: combined/)"
 python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$REPO_ROOT/combined" >/dev/null 2>&1 &
 HTTP_PID=$!
 cleanup() { kill "$HTTP_PID" 2>/dev/null || true; }
