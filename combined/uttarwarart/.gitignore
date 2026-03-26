@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Lock files (optional: remove if you want to commit for reproducible installs)
+package-lock.json
+
+# Build / test artifacts
+coverage/
+.nyc_output/
+dist/
+build/
+*.log
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# Optional: uncomment if you want output_defaults contents ignored (folder stays)
+# output_defaults/

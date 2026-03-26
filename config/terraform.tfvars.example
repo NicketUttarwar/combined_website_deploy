@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (gitignored) next to this file and set a globally unique bucket name:
+#   cp config/terraform.tfvars.example config/terraform.tfvars
+# All resources use us-east-1 (N. Virginia). Do not set aws_region unless you fork validation in variables.tf.
+# s3_bucket_name = "your-unique-combined-site-bucket"
+
+s3_bucket_name = "REPLACE_WITH_GLOBALLY_UNIQUE_BUCKET_NAME"
+
+# Optional overrides:
+# project_name = "combined-site"
+# environment  = "prod"
+# common_tags = { Owner = "you" }

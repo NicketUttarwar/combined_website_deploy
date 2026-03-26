@@ -1,0 +1,344 @@
+[
+  {
+    "folder": "2017-10-22_18-41-22_438-1773426051302",
+    "source_filename": "2017-10-22_18-41-22_438",
+    "food": "Gulab jamun",
+    "composite_width_px": 2541,
+    "composite_height_px": 3536,
+    "sections": [
+      {
+        "index": 1,
+        "filename": "section-1.png",
+        "bounds_px": {
+          "x": 35,
+          "y": 90,
+          "width": 1163,
+          "height": 1653
+        },
+        "width_px": 1163,
+        "height_px": 1653
+      },
+      {
+        "index": 0,
+        "filename": "section-0.png",
+        "bounds_px": {
+          "x": 1198,
+          "y": 20,
+          "width": 1324,
+          "height": 1748
+        },
+        "width_px": 1324,
+        "height_px": 1748
+      },
+      {
+        "index": 3,
+        "filename": "section-3.png",
+        "bounds_px": {
+          "x": 1198,
+          "y": 1768,
+          "width": 1309,
+          "height": 1748
+        },
+        "width_px": 1309,
+        "height_px": 1748
+      },
+      {
+        "index": 2,
+        "filename": "section-2.png",
+        "bounds_px": {
+          "x": 20,
+          "y": 1743,
+          "width": 1178,
+          "height": 1653
+        },
+        "width_px": 1178,
+        "height_px": 1653
+      }
+    ]
+  },
+  {
+    "folder": "2017-10-22_18-44-37_815-1773425590108",
+    "source_filename": "2017-10-22_18-44-37_815",
+    "food": "Pani puri",
+    "composite_width_px": 3656,
+    "composite_height_px": 2299,
+    "sections": [
+      {
+        "index": 0,
+        "filename": "section-0.png",
+        "bounds_px": {
+          "x": 20,
+          "y": 50,
+          "width": 1749,
+          "height": 2213
+        },
+        "width_px": 1749,
+        "height_px": 2213
+      },
+      {
+        "index": 1,
+        "filename": "section-1.png",
+        "bounds_px": {
+          "x": 1769,
+          "y": 20,
+          "width": 1868,
+          "height": 2259
+        },
+        "width_px": 1868,
+        "height_px": 2259
+      }
+    ]
+  },
+  {
+    "folder": "2017-10-22_18-45-30_011-1773425527848",
+    "source_filename": "2017-10-22_18-45-30_011",
+    "food": "Masala chai",
+    "composite_width_px": 2549,
+    "composite_height_px": 2966,
+    "sections": [
+      {
+        "index": 1,
+        "filename": "section-1.png",
+        "bounds_px": {
+          "x": 20,
+          "y": 1461,
+          "width": 2509,
+          "height": 1485
+        },
+        "width_px": 2509,
+        "height_px": 1485
+      },
+      {
+        "index": 0,
+        "filename": "section-0.png",
+        "bounds_px": {
+          "x": 31,
+          "y": 20,
+          "width": 2472,
+          "height": 1441
+        },
+        "width_px": 2472,
+        "height_px": 1441
+      }
+    ]
+  },
+  {
+    "folder": "2018-04-14_15-04-01_217-1773425053106",
+    "source_filename": "2018-04-14_15-04-01_217",
+    "food": "Bread pudding",
+    "composite_width_px": 1613,
+    "composite_height_px": 2248,
+    "sections": [
+      {
+        "index": 0,
+        "filename": "section-0.png",
+        "bounds_px": {
+          "x": 37,
+          "y": 212,
+          "width": 742,
+          "height": 992
+        },
+        "width_px": 742,
+        "height_px": 992
+      },
+      {
+        "index": 1,
+        "filename": "section-1.png",
+        "bounds_px": {
+          "x": 780,
+          "y": 20,
+          "width": 813,
+          "height": 781
+        },
+        "width_px": 813,
+        "height_px": 781
+      },
+      {
+        "index": 2,
+        "filename": "section-2.png",
+        "bounds_px": {
+          "x": 782,
+          "y": 801,
+          "width": 806,
+          "height": 710
+        },
+        "width_px": 806,
+        "height_px": 710
+      },
+      {
+        "index": 3,
+        "filename": "section-3.png",
+        "bounds_px": {
+          "x": 782,
+          "y": 1511,
+          "width": 806,
+          "height": 717
+        },
+        "width_px": 806,
+        "height_px": 717
+      },
+      {
+        "index": 4,
+        "filename": "section-4.png",
+        "bounds_px": {
+          "x": 20,
+          "y": 1204,
+          "width": 762,
+          "height": 966
+        },
+        "width_px": 762,
+        "height_px": 966
+      }
+    ]
+  },
+  {
+    "folder": "2021-01-07_08-40-59_470-1773425203837",
+    "source_filename": "2021-01-07_08-40-59_470",
+    "food": "Clam chowder",
+    "composite_width_px": 3314,
+    "composite_height_px": 2094,
+    "sections": [
+      {
+        "index": 1,
+        "filename": "section-1.png",
+        "bounds_px": {
+          "x": 1697,
+          "y": 31,
+          "width": 1598,
+          "height": 2026
+        },
+        "width_px": 1598,
+        "height_px": 2026
+      },
+      {
+        "index": 0,
+        "filename": "section-0.png",
+        "bounds_px": {
+          "x": 20,
+          "y": 20,
+          "width": 1677,
+          "height": 2054
+        },
+        "width_px": 1677,
+        "height_px": 2054
+      }
+    ]
+  },
+  {
+    "folder": "IMG_8677-1773425284321",
+    "source_filename": "IMG_8677",
+    "food": "Irish coffee",
+    "composite_width_px": 1113,
+    "composite_height_px": 839,
+    "sections": [
+      {
+        "index": 0,
+        "filename": "section-0.png",
+        "bounds_px": {
+          "x": 20,
+          "y": 20,
+          "width": 562,
+          "height": 799
+        },
+        "width_px": 562,
+        "height_px": 799
+      },
+      {
+        "index": 1,
+        "filename": "section-1.png",
+        "bounds_px": {
+          "x": 582,
+          "y": 33,
+          "width": 511,
+          "height": 778
+        },
+        "width_px": 511,
+        "height_px": 778
+      }
+    ]
+  },
+  {
+    "folder": "2017-10-22_18-43-49_976-1773425605558",
+    "source_filename": "2017-10-22_18-43-49_976",
+    "food": "Jalebi",
+    "composite_width_px": 2483,
+    "composite_height_px": 3529,
+    "sections": [
+      {
+        "index": 0,
+        "filename": "section-0.png",
+        "bounds_px": {
+          "x": 20,
+          "y": 20,
+          "width": 2443,
+          "height": 3489
+        },
+        "width_px": 2443,
+        "height_px": 3489
+      }
+    ]
+  },
+  {
+    "folder": "2017-10-23_13-12-25_742-1773425358835",
+    "source_filename": "2017-10-23_13-12-25_742",
+    "food": "High tea",
+    "composite_width_px": 2600,
+    "composite_height_px": 3302,
+    "sections": [
+      {
+        "index": 0,
+        "filename": "section-0.png",
+        "bounds_px": {
+          "x": 20,
+          "y": 20,
+          "width": 2560,
+          "height": 3262
+        },
+        "width_px": 2560,
+        "height_px": 3262
+      }
+    ]
+  },
+  {
+    "folder": "2017-10-23_13-12-39_331-1773425345980",
+    "source_filename": "2017-10-23_13-12-39_331",
+    "food": "CTM",
+    "composite_width_px": 2527,
+    "composite_height_px": 3200,
+    "sections": [
+      {
+        "index": 0,
+        "filename": "section-0.png",
+        "bounds_px": {
+          "x": 20,
+          "y": 20,
+          "width": 2487,
+          "height": 3160
+        },
+        "width_px": 2487,
+        "height_px": 3160
+      }
+    ]
+  },
+  {
+    "folder": "2017-10-23_13-12-49_905-1773425314675",
+    "source_filename": "2017-10-23_13-12-49_905",
+    "food": "Full English",
+    "composite_width_px": 2395,
+    "composite_height_px": 2973,
+    "sections": [
+      {
+        "index": 0,
+        "filename": "section-0.png",
+        "bounds_px": {
+          "x": 20,
+          "y": 20,
+          "width": 2355,
+          "height": 2933
+        },
+        "width_px": 2355,
+        "height_px": 2933
+      }
+    ]
+  }
+]

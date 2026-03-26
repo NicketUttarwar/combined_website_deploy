@@ -1,0 +1,28 @@
+# Nicket Uttarwar
+
+> Personal site: product, DevOps, AI, career timeline, life story, visual art, and contact. Static HTML; machine-readable pages and JSON artwork index.
+
+## Site
+
+- [Home](https://nicketuttarwar.com/)
+- [About](https://nicketuttarwar.com/about/) — background, education, heritage (Naturell), FAQ
+- [Experience](https://nicketuttarwar.com/experience/) — professional roles and timeline
+- [Nicket's Life](https://nicketuttarwar.com/life/) — life journey timeline
+- [Art](https://nicketuttarwar.com/art/) — creative work; links to full portfolio
+- [Contact](https://nicketuttarwar.com/contact/) — email
+
+## Uttarwar Art (interactive portfolio)
+
+- [Uttarwar Art](https://nicketuttarwar.com/uttarwarart/) — 3D scroll portfolio (requires JavaScript for full experience)
+- [Art index JSON](https://nicketuttarwar.com/uttarwarart/data/art-index.json) — artwork metadata and structure for tools and automations
+
+## Machine-readable extras
+
+- [Sitemap](https://nicketuttarwar.com/sitemap.xml)
+- [Robots](https://nicketuttarwar.com/robots.txt)
+- Not found: custom [404](https://nicketuttarwar.com/404.html) page (`noindex`; used for bad URLs via CDN/server config)
+
+## Profiles
+
+- [LinkedIn](https://www.linkedin.com/in/nicket-uttarwar/)
+- [GitHub](https://github.com/NicketUttarwar)

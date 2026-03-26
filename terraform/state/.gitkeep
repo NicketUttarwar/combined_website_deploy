@@ -1,0 +1,2 @@
+# Keeps terraform/state/ in Git until terraform.tfstate exists (after first apply).
+# The real state file is terraform/state/terraform.tfstate (tracked; see root .gitignore).

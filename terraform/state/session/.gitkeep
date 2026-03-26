@@ -1,0 +1,1 @@
+# Keeps terraform/state/session/ in Git. Rolling backup latest.tfstate is gitignored.
