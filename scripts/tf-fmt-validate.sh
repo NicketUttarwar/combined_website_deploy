@@ -64,5 +64,7 @@ if ! terraform_common_effective_var_file_path >/dev/null 2>&1; then
   export TF_VAR_s3_bucket_name="${TF_VAR_s3_bucket_name:-terraform-fmt-validate-placeholder-bucket}"
   tf_log "validate: no terraform.tfvars — using TF_VAR_s3_bucket_name=${TF_VAR_s3_bucket_name}"
 fi
+terraform_common_warn_if_terraform_cli_not_native_arm64
+terraform_common_warn_if_aws_provider_arch_mismatch
 terraform_common_exec_local validate
 tf_log "fmt + validate finished."

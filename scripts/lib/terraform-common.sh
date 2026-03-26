@@ -149,6 +149,39 @@ terraform_common_require() {
   _TF_COMMON_REQUIRE_OK=1
 }
 
+# On Apple Silicon, tfenv can leave an x86_64 Terraform if the version was installed under Rosetta.
+# That forces darwin_amd64 providers and often causes plugin startup timeouts.
+terraform_common_warn_if_terraform_cli_not_native_arm64() {
+  [[ "$(uname -m)" == "arm64" ]] || return 0
+  local tfenv_root="${TFENV_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/tfenv}"
+  local ver tf_bin ft
+  [[ -f "$tfenv_root/version" ]] || return 0
+  ver="$(cat "$tfenv_root/version" 2>/dev/null || true)"
+  [[ -n "$ver" ]] || return 0
+  tf_bin="$tfenv_root/versions/$ver/terraform"
+  [[ -f "$tf_bin" ]] || return 0
+  ft="$(file -b "$tf_bin" 2>/dev/null || true)"
+  if [[ "$ft" == *x86_64* ]]; then
+    tf_warn "Terraform at $tf_bin is x86_64 on an arm64 Mac — reinstall for arm64: rm -rf \"$tfenv_root/versions/$ver\" && tfenv install $ver"
+  fi
+}
+
+# Warn when the host is Apple Silicon but only the darwin_amd64 AWS provider is installed (Rosetta).
+# That mismatch often causes "timeout while waiting for plugin to start" during validate/plan.
+terraform_common_warn_if_aws_provider_arch_mismatch() {
+  [[ "$(uname -m)" == "arm64" ]] || return 0
+  local base="${TF_DIR}/.terraform/providers/registry.terraform.io/hashicorp/aws"
+  [[ -d "$base" ]] || return 0
+  local verdir
+  for verdir in "$base"/*; do
+    [[ -d "$verdir" ]] || continue
+    if [[ -d "$verdir/darwin_amd64" && ! -d "$verdir/darwin_arm64" ]]; then
+      tf_warn "This Mac is arm64 but the AWS provider under .terraform is darwin_amd64 only (Rosetta). Plugin startup can time out. Fix: rm -rf \"${TF_DIR}/.terraform/providers\" && ./scripts/tf-init.sh (use a native arm64 terraform binary so init installs darwin_arm64)."
+      return 0
+    fi
+  done
+}
+
 terraform_common_source_aws_env() {
   [[ "${_TF_COMMON_AWS_ENV_SOURCED:-}" == "1" ]] && return 0
   local env="${REPO_ROOT}/config/aws.env"
