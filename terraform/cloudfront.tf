@@ -6,14 +6,6 @@ data "aws_cloudfront_origin_request_policy" "cors_s3" {
   name = "Managed-CORS-S3Origin"
 }
 
-resource "aws_cloudfront_origin_access_control" "site" {
-  name                              = "${var.project_name}-oac"
-  description                       = "OAC for ${var.project_name} static site"
-  origin_access_control_origin_type = "s3"
-  signing_behavior                  = "always"
-  signing_protocol                  = "sigv4"
-}
-
 resource "aws_cloudfront_distribution" "site" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -23,19 +15,42 @@ resource "aws_cloudfront_distribution" "site" {
   aliases             = var.domain_names
 
   origin {
-    domain_name              = aws_s3_bucket.site.bucket_regional_domain_name
-    origin_id                = "S3-site"
-    origin_access_control_id = aws_cloudfront_origin_access_control.site.id
+    domain_name = aws_s3_bucket_website_configuration.site.website_endpoint
+    origin_id   = "S3-website"
+
+    custom_origin_config {
+      http_port                = 80
+      https_port               = 443
+      origin_protocol_policy   = "http-only"
+      origin_ssl_protocols     = ["TLSv1.2"]
+      origin_read_timeout      = 30
+      origin_keepalive_timeout = 5
+    }
   }
 
   default_cache_behavior {
     allowed_methods          = ["GET", "HEAD", "OPTIONS"]
     cached_methods           = ["GET", "HEAD"]
-    target_origin_id         = "S3-site"
+    target_origin_id         = "S3-website"
     cache_policy_id          = data.aws_cloudfront_cache_policy.caching_optimized.id
     origin_request_policy_id = data.aws_cloudfront_origin_request_policy.cors_s3.id
     viewer_protocol_policy   = "redirect-to-https"
     compress                 = true
+  }
+
+  # Fallback when the origin returns 403/404 so viewers still see the static error page.
+  custom_error_response {
+    error_code            = 403
+    response_code         = 404
+    response_page_path    = "/404.html"
+    error_caching_min_ttl = 0
+  }
+
+  custom_error_response {
+    error_code            = 404
+    response_code         = 404
+    response_page_path    = "/404.html"
+    error_caching_min_ttl = 0
   }
 
   viewer_certificate {
@@ -51,5 +66,9 @@ resource "aws_cloudfront_distribution" "site" {
     }
   }
 
-  depends_on = [aws_acm_certificate_validation.site]
+  depends_on = [
+    aws_acm_certificate_validation.site,
+    aws_s3_bucket_website_configuration.site,
+    aws_s3_bucket_policy.site,
+  ]
 }

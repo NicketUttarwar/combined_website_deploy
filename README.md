@@ -1,27 +1,28 @@
 # Static website deploy (Terraform + S3 + CloudFront)
 
-This repository deploys **one static website**: a **single S3 bucket**, **one CloudFront distribution**, and **TLS from AWS Certificate Manager** for **nicketuttarwar.com** with **apex and `www`** by default. Site files live under **`combined/`** in this repo (synced to the bucket root). **DNS stays at your registrar**—this guide uses **Network Solutions** as the example; the same record types apply at any DNS host.
+This repository deploys **one static website**: a **single S3 bucket** (with **static website hosting** enabled), **one CloudFront distribution** that uses the bucket’s **`s3-website-…` HTTP origin** (not the S3 REST API), and **TLS from AWS Certificate Manager** for **nicketuttarwar.com** with **apex and `www`** by default. Site files live under **`combined/`** in this repo (synced to the bucket root). **DNS stays at your registrar**—this guide uses **Network Solutions** as the example; the same record types apply at any DNS host.
 
 ---
 
 ## Table of contents
 
 1. [How this fits together](#how-this-fits-together)
-2. [Terraform state in Git](#terraform-state-in-git)
-3. [Regions: single region (us-east-1)](#regions-single-region-us-east-1-n-virginia)
-4. [TLS certificates: ACM only](#tls-certificates-acm-only-no-certbot-no-keys-on-your-mac)
-5. [Prerequisites checklist](#prerequisites-checklist)
-6. [End-to-end deployment (step by step)](#end-to-end-deployment-step-by-step)  
+2. [Architecture: S3 website endpoint and CloudFront](#architecture-s3-website-endpoint-and-cloudfront)
+3. [Terraform state in Git](#terraform-state-in-git)
+4. [Regions: single region (us-east-1)](#regions-single-region-us-east-1-n-virginia)
+5. [TLS certificates: ACM only](#tls-certificates-acm-only-no-certbot-no-keys-on-your-mac)
+6. [Prerequisites checklist](#prerequisites-checklist)
+7. [End-to-end deployment (step by step)](#end-to-end-deployment-step-by-step)  
    - [Step 0 — Clone the repo and install tools](#step-0--clone-the-repo-and-install-tools)  
    - [Steps 1–4 — AWS credentials and Terraform config](#step-1--create-aws-access-keys-for-terraform-on-your-machine)  
    - [Steps 5–6 — Terraform init and plan](#step-5--initialize-terraform)  
    - [Steps 7–10 — Terraform: phase 1 apply, ACM DNS, check script, full apply](#step-7--first-terraform-apply-phase-1-s3--acm-request-no-dns-wait)  
    - [Steps 11–12 — Network Solutions: site DNS + content](#step-11--point-your-site-dns-at-cloudfront-network-solutions)  
    - [Steps 13–14 — Invalidate and verify](#step-13--invalidate-cloudfront-caches-after-uploads)
-7. [Network Solutions: detailed DNS guide](#network-solutions-detailed-dns-guide)
-8. [Quick reference: scripts](#quick-reference-scripts)
-9. [Troubleshooting](#troubleshooting-short)
-10. [Related docs and summary checklist](#related-docs-in-this-repo)
+8. [Network Solutions: detailed DNS guide](#network-solutions-detailed-dns-guide)
+9. [Quick reference: scripts](#quick-reference-scripts)
+10. [Troubleshooting](#troubleshooting-short)
+11. [Related docs and summary checklist](#related-docs-in-this-repo)
 
 ---
 
@@ -34,6 +35,21 @@ This repository deploys **one static website**: a **single S3 bucket**, **one Cl
 | **This repo** | Terraform defines one website’s infrastructure; static files live under **`combined/`** |
 
 You will log into **two different systems**: the **AWS console** (in **`us-east-1`**) and your **registrar/DNS** (e.g. Network Solutions). Nothing in this stack moves your DNS to Route 53 unless you choose to.
+
+---
+
+## Architecture: S3 website endpoint and CloudFront
+
+**Why not the S3 REST API (`bucket.s3…amazonaws.com`) with Origin Access Control?**  
+CloudFront can lock the bucket down so only the distribution may read objects—but the REST API returns **one object per exact key**. It does **not** treat `/about/` as `about/index.html`, so nested routes from a normal static tree break unless you add rewrite logic at the edge.
+
+**What this stack does instead:** Terraform enables **S3 static website hosting** on the bucket (index document **`index.html`**, error document **`404.html`**) and points CloudFront at the **website endpoint** hostname (`bucket.s3-website-*-amazonaws.com`). That endpoint applies **index** rules the same way Nginx `try_files` would: e.g. **`/about/`** serves **`about/index.html`**. CloudFront connects to the origin over **HTTP** (port 80); viewers still use **HTTPS** to CloudFront.
+
+**Bucket policy:** The website endpoint cannot use **Origin Access Control** (OAC only applies to the REST API). Objects must be **publicly readable** via **`s3:GetObject`** on `arn:aws:s3:::bucket/*` so the website origin can return them. **Visitors should use your domain** (CloudFront); direct S3 URLs are possible for anyone who knows an object key—same tradeoff as a typical public static site.
+
+**Custom errors:** The distribution maps **403** and **404** from the origin to **`/404.html`** with a **404** response code where appropriate, so missing paths still show your static error page (see `terraform/cloudfront.tf`).
+
+**Upgrading from an older deploy** that used **REST + OAC:** `terraform apply` will **remove** the Origin Access Control resource, **replace** the bucket policy with public read, and **update** the CloudFront origin to the website hostname. Plan and apply during a maintenance window if you prefer.
 
 ---
 
@@ -59,7 +75,7 @@ This stack does **not** put AWS credentials in Terraform variables; credentials 
 
 ## Regions: single region (us-east-1, N. Virginia)
 
-**Everything in this stack uses one region:** **`us-east-1`**. That includes the **S3 bucket**, **ACM** certificate, **CloudFront** distribution, **Origin Access Control**, and the bucket policy. **`var.aws_region`** defaults to **`us-east-1`** and is validated so it cannot be changed without editing `terraform/variables.tf`. Set **`AWS_DEFAULT_REGION=us-east-1`** in `config/aws.env` so the CLI matches Terraform.
+**Everything in this stack uses one region:** **`us-east-1`**. That includes the **S3 bucket** (including **static website configuration**), **ACM** certificate, **CloudFront** distribution, and the **bucket policy**. **`var.aws_region`** defaults to **`us-east-1`** and is validated so it cannot be changed without editing `terraform/variables.tf`. Set **`AWS_DEFAULT_REGION=us-east-1`** in `config/aws.env` so the CLI matches Terraform.
 
 **Why `us-east-1`:** CloudFront viewer certificates must use public ACM certs in **`us-east-1`**. Placing the bucket and all other resources there avoids splitting the deployment across regions.
 
@@ -119,7 +135,7 @@ Follow these in order. **Network Solutions–specific detail** (field names, ape
 2. Open **IAM** → **Users** → your user (or create a dedicated user for deployments, e.g. `terraform-deploy`).
 3. **Security credentials** → **Create access key** → choose a use case such as **Command Line Interface (CLI)**.
 4. Save the **Access key ID** and **Secret access key** somewhere safe (password manager). You will not see the secret again.
-5. Ensure the user can manage this stack’s services in **`us-east-1`** (S3, ACM, CloudFront, IAM for OAC-related reads, etc.).
+5. Ensure the user can manage this stack’s services in **`us-east-1`** (S3, ACM, CloudFront, IAM as needed for Terraform, etc.).
 
 **Security:** Do not commit keys. Do not paste them into Terraform files that are tracked by git.
 
@@ -198,13 +214,13 @@ This runs **`terraform init`** in the **`terraform/`** directory with your envir
 ./scripts/tf-plan.sh
 ```
 
-Inspect the planned resources: S3 bucket, ACM certificate, CloudFront distribution, bucket policy, etc.
+Inspect the planned resources: S3 bucket, website configuration, ACM certificate, CloudFront distribution, public-read bucket policy, etc.
 
 ---
 
 ### Step 7 — First Terraform apply (phase 1): S3 + ACM request — no DNS wait
 
-Use the **phase 1** script so Terraform **does not** sit on `aws_acm_certificate_validation` while you work in your DNS provider (Network Solutions). It creates the **S3 bucket**, **ACM certificate request**, and **CloudFront Origin Access Control**, then **exits**.
+Use the **phase 1** script so Terraform **does not** sit on `aws_acm_certificate_validation` while you work in your DNS provider (Network Solutions). It creates the **S3 bucket**, **public access block** (so a public bucket policy is allowed later), **S3 static website configuration** (index and error documents), and the **ACM certificate request**, then **exits**.
 
 ```bash
 ./scripts/tf-apply-phase1.sh
@@ -282,7 +298,7 @@ When the cert is **Issued**, proceed to **Step 10**.
 
 ### Step 10 — Second Terraform apply (`tf-apply.sh`): CloudFront + validation
 
-When **ACM** shows the certificate **Issued**, apply the rest of the stack (ACM validation resource, CloudFront, bucket policy). Terraform may wait briefly while it **confirms** validation — usually **seconds** if DNS is already correct.
+When **ACM** shows the certificate **Issued**, apply the rest of the stack (ACM validation resource, **public-read bucket policy**, **CloudFront** with **S3 website origin**). Terraform may wait briefly while it **confirms** validation — usually **seconds** if DNS is already correct.
 
 ```bash
 ./scripts/tf-apply.sh
@@ -414,7 +430,7 @@ Each run prints **`[script-name]`** lines to **stderr** (what is loading, the ex
 |--------|---------|
 | `./scripts/tf-init.sh` | `terraform init` |
 | `./scripts/tf-plan.sh` | `terraform plan` |
-| `./scripts/tf-apply-phase1.sh` | **First `apply` on a new stack:** S3 + ACM certificate request + OAC only — **returns immediately** (no wait for DNS validation); see README Step 7 |
+| `./scripts/tf-apply-phase1.sh` | **First `apply` on a new stack:** S3 + website hosting config + ACM certificate request — **returns immediately** (no wait for DNS validation); see README Step 7 |
 | `./scripts/check-acm-dns.sh` | After ACM validation CNAMEs exist: prints the **ACM console** link and reminders (does not query AWS) |
 | `./scripts/tf-apply.sh` | Full **`terraform apply`** (use after phase 1 + DNS; creates CloudFront, validation, bucket policy) |
 | `./scripts/tf-destroy.sh` | `terraform destroy` |
@@ -474,7 +490,8 @@ To run the site test alone with your own server: **`BASE=http://127.0.0.1:8080 p
 | Issue | What to check |
 |--------|----------------|
 | Certificate stuck **Pending validation** | ACM validation CNAME **name and value** match Terraform/ACM exactly; records are in the **correct** zone for **`domain_names`**. |
-| CloudFront **403** from S3 | Bucket policy allows the distribution ARN; origin uses **Origin Access Control**; objects exist at the paths you request under **`combined/`** after sync. |
+| CloudFront **403** / XML **AccessDenied** on subpaths (e.g. `/about/`) | This stack uses the **S3 website** origin so directory URLs resolve to `*/index.html`. If you still see REST-style errors, confirm **`terraform apply`** completed and **`./scripts/tf-output.sh`** shows **`s3_website_endpoint`**. Ensure **`combined/`** is synced so keys like **`about/index.html`** exist. |
+| **403** after changing Terraform | Full apply must create the **public-read** bucket policy and CloudFront origin update. Re-run **`./scripts/tf-apply.sh`** if phase 1 only ran. |
 | Wrong site on a hostname | DNS **CNAME** for **`www`** points to **`cloudfront_domain_name`**. |
 | `terraform` or AWS errors about region | Use **`AWS_DEFAULT_REGION=us-east-1`** and **`aws_region = "us-east-1"`** (default). This stack is single-region. |
 | Wrong bucket name or missing **`s3_bucket_name`** in plans/applies | Edit **`config/terraform.tfvars`** (or **`TF_VAR_FILE`**). Ensure **`./scripts/tf-plan.sh`** shows the intended name. |
@@ -494,9 +511,9 @@ To run the site test alone with your own server: **`BASE=http://127.0.0.1:8080 p
 2. Create IAM access keys; put them in **`config/aws.env`** (**never commit**); set **`AWS_DEFAULT_REGION=us-east-1`**.  
 3. Copy **`config/terraform.tfvars.example`** → **`config/terraform.tfvars`**; set **unique `s3_bucket_name`** and **`domain_names`** if needed (defaults: **nicketuttarwar.com** + **www**).  
 4. **`./scripts/tf-init.sh`** → **`./scripts/tf-plan.sh`** → **`./scripts/tf-apply-phase1.sh`** (ends without waiting on DNS).  
-5. In **Network Solutions**, add **ACM validation** CNAMEs; in **ACM** (us-east-1), wait until the cert is **Issued** (or run **`./scripts/check-acm-dns.sh`** for the console link); then **`./scripts/tf-apply.sh`** to create CloudFront and the rest.  
+5. In **Network Solutions**, add **ACM validation** CNAMEs; in **ACM** (us-east-1), wait until the cert is **Issued** (or run **`./scripts/check-acm-dns.sh`** for the console link); then **`./scripts/tf-apply.sh`** to create **CloudFront** (S3 **website** origin), **public-read bucket policy**, and the rest.  
 6. In **Network Solutions**, add **website** CNAMEs (`www` → **`cloudfront_domain_name`**) and handle **apex** (forwarding or ALIAS-style).  
-7. **`aws s3 sync`** your **`combined/`** tree; **invalidate** CloudFront; test **HTTPS** in the browser.  
+7. **`aws s3 sync`** your **`combined/`** tree; **invalidate** CloudFront; test **HTTPS** and subpaths such as **`/about/`** in the browser.  
 8. To tear everything down: **`./scripts/destroy-stack.sh`** (or **`./scripts/tf-destroy.sh`**).
 
 **Legacy state:** If you previously used older Terraform in this repo with differently named resources, see **`terraform/moved.tf`** for address migrations. After changing **`project_name`** from an earlier default (e.g. to **`website`**), run **`terraform plan`** and update tags in AWS if you rely on the **Project** tag for scripts such as **`list-tagged-resources.sh`**.

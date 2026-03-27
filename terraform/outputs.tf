@@ -8,6 +8,11 @@ output "s3_bucket_arn" {
   value       = aws_s3_bucket.site.arn
 }
 
+output "s3_website_endpoint" {
+  description = "S3 static website hostname (HTTP). CloudFront uses this origin; useful for debugging."
+  value       = aws_s3_bucket_website_configuration.site.website_endpoint
+}
+
 output "cloudfront_distribution_id" {
   description = "CloudFront distribution ID (use for invalidations and DNS; aliases come from domain_names)."
   value       = aws_cloudfront_distribution.site.id

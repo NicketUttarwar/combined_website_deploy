@@ -114,13 +114,15 @@ Unknown paths should return **your** `404.html` (not a plain Nginx page). After 
 
 ## Hosting on AWS (S3 + CloudFront)
 
-Deploy the **`combined/`** tree as the bucket root (or sync `combined/` contents into the bucket) so `404.html` lives at the object key **`404.html`**.
+This repo’s Terraform deploys **`combined/`** to the **bucket root** (e.g. `aws s3 sync combined/ s3://YOUR_BUCKET/ --delete`). Object keys mirror the folder layout: **`about/index.html`** for **`/about/`**, **`404.html`** at the root for errors, etc.
 
-1. **S3 static website hosting** (optional origin): set **Error document** to `404.html` (and index document to `index.html`). Note: static website endpoints are HTTP-only; production usually uses CloudFront in front.
+**How routing works:** CloudFront uses the bucket’s **S3 static website** hostname (`…s3-website-…amazonaws.com`) as its **origin**, not the S3 **REST** API. The website endpoint honors **index** and **error** documents (`index.html`, `404.html`), so URLs like **`https://www.example.com/about/`** resolve to **`about/index.html`**. The REST API alone cannot do that without edge rewrites.
 
-2. **CloudFront** (recommended): add a **custom error response** for **403** and **404** (S3 sometimes returns 403 for missing keys) pointing to **`/404.html`**, with **HTTP response code** `404` (or `200` if you prefer the error page body without a 404 status—`404` is better for SEO). Ensure `404.html` is deployed and publicly readable via the origin.
+**Tradeoffs:** The website origin requires **public read** access to objects (`s3:GetObject` for `arn:aws:s3:::bucket/*`). **Origin Access Control** only applies to the REST API. Visitors should use your **custom domain** (CloudFront); direct S3 URLs can still fetch public objects if the key is known.
 
-3. **Paths in `404.html`** are **root-absolute** (`/css/style.css`, `/images/…`) so the page renders correctly when the user requested a missing URL under any path (e.g. `/about/wrong`).
+**Terraform also configures** CloudFront **custom error responses** (403/404 → **`/404.html`**) as a fallback. **Paths in `404.html`** stay **root-absolute** (`/css/style.css`, `/images/…`) so the error page renders for bad URLs under any path.
+
+See the repository **`README.md`** for deployment steps, **`terraform/`** for the exact resources, and **`./scripts/tf-output.sh`** for **`s3_website_endpoint`** and **`cloudfront_domain_name`**.
 
 ---
 
@@ -167,4 +169,4 @@ nicketuttarwar.com/
 - **Contact:** The contact page uses a `mailto:` link only; there is no server-side form.
 - **Paths:** Inner pages use `../` for assets (e.g. `../css/style.css`). Keep the folder structure.
 - **Images:** All image assets live in `images/`. Subpages use `../images/...`.
-- **HTTPS:** Use Certbot (steps above) to serve the site over HTTPS on Ubuntu.
+- **HTTPS:** On a VPS, use Certbot (steps above). On AWS, TLS terminates at **CloudFront** (ACM); see the repo **`README.md`**.
