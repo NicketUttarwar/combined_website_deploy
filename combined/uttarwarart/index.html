@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0b" />
   <meta name="description" content="Uttarwar Art — interactive 3D portfolio of culinary-inspired artwork by Nicket Uttarwar. Scroll experience; JSON index available for tools." />
   <meta name="robots" content="index, follow, max-image-preview:large" />
   <link rel="canonical" href="https://nicketuttarwar.com/uttarwarart/" />
@@ -30,6 +31,7 @@
     }
     html {
       scroll-behavior: smooth;
+      scroll-padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
     }
     body {
       font-family: 'Outfit', sans-serif;
@@ -52,8 +54,8 @@
       font-family: 'Outfit', sans-serif;
     }
     .skip-link:focus {
-      left: 0.75rem;
-      top: 0.75rem;
+      left: max(0.75rem, env(safe-area-inset-left, 0px));
+      top: max(0.75rem, env(safe-area-inset-top, 0px));
       position: fixed;
     }
     #canvas-wrap {
@@ -174,8 +176,94 @@
     }
     .progress-dots .dot.active {
       background: rgba(255,255,255,0.95);
-      transform: scale(1.4);
+            transform: scale(1.4);
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      #culinary-carousel .carousel-track { animation: none; }
+    }
+
+    /* ——— Mobile / notched phones: readable chrome, tappable controls, no clipped overlays ——— */
+    @media (max-width: 768px) {
+      .title-overlay {
+        padding-top: max(clamp(1rem, 3vw, 2rem), env(safe-area-inset-top, 0px));
+        padding-left: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-left, 0px));
+        padding-right: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-right, 0px));
+      }
+      .title-overlay h1 {
+        font-size: clamp(1rem, 4.2vw, 1.45rem);
+        flex: 1 1 100%;
+        text-align: center;
+        order: 2;
+      }
+      .title-overlay .hint {
+        order: 3;
+        width: 100%;
+        text-align: center;
+      }
+      .title-overlay .back-to-main {
+        order: 1;
+        min-height: 44px;
+        padding: 0.55rem 1rem;
+        align-self: flex-start;
+      }
+      .scroll-progress-wrap {
+        right: max(0.5rem, env(safe-area-inset-right, 0px));
+        top: auto;
+        bottom: max(5.75rem, calc(env(safe-area-inset-bottom, 0px) + 4.25rem));
+        transform: none;
+        padding: 0.55rem 0.45rem;
+        max-height: min(38vh, 320px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+      }
+      .piece-label-wrap {
+        bottom: max(clamp(0.85rem, 3vw, 1.5rem), env(safe-area-inset-bottom, 0px));
+        left: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-left, 0px));
+        right: max(0.75rem, env(safe-area-inset-right, 0px));
+        max-width: none;
+      }
+      .piece-label-row {
+        max-width: 100%;
+      }
+      #culinary-carousel {
+        padding-top: max(clamp(4rem, 12vh, 6rem), calc(env(safe-area-inset-top, 0px) + 2.5rem));
+      }
+      #about .culture-block,
+      #about .culture-block:nth-child(2),
+      #about .culture-block:nth-child(3),
+      #about .culture-block:nth-child(4) {
+        flex-direction: column !important;
+        min-height: min(100dvh, 960px);
+        gap: 1.5rem;
+        padding: clamp(1.5rem, 4vw, 2.5rem) max(1rem, env(safe-area-inset-left, 0px)) clamp(2rem, 5vw, 3rem) max(1rem, env(safe-area-inset-right, 0px));
+      }
+      #about .culture-image-wrap {
+        flex-shrink: 0;
+      }
+      #about .culture-image-wrap img {
+        width: min(100%, 280px);
+        height: min(100vw, 280px);
+        max-height: 72vw;
+      }
+      #about .section-badge {
+        left: max(1rem, env(safe-area-inset-left, 0px));
+      }
+    }
+
+    @supports not (min-height: 100dvh) {
+      @media (max-width: 768px) {
+        #about .culture-block,
+        #about .culture-block:nth-child(2),
+        #about .culture-block:nth-child(3),
+        #about .culture-block:nth-child(4) {
+          min-height: min(100vh, 960px);
+        }
+      }
+    }
+
     /* ——— Right-side scroll section: progress bar + artwork navigation ——— */
     .scroll-progress-wrap {
       position: fixed;

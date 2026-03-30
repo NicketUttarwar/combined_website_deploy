@@ -28,15 +28,16 @@
 		<nav class="nav-inner">
 			<input type="checkbox" id="nav-toggle" class="nav-check" hidden aria-hidden="true">
 			<a href="./" class="nav-logo"><img src="images/logo.png" alt="Nicket Uttarwar" class="nav-logo-img"></a>
-			<ul class="nav-links">
+			<ul class="nav-links" id="site-nav-menu">
 				<li><a href="./" class="nav-active" aria-current="page">Home</a></li>
 				<li><a href="about/">About</a></li>
+				<li><a href="about/#heritage">Heritage</a></li>
 				<li><a href="experience/">Experience</a></li>
 				<li><a href="life/">Nicket's Life</a></li>
-				<li><a href="art/">Art</a></li>
+				<li><a href="art/" class="nav-link-art">Art</a></li>
 				<li><a href="contact/">Contact</a></li>
 			</ul>
-			<label for="nav-toggle" class="nav-toggle" aria-label="Toggle menu">
+			<label for="nav-toggle" class="nav-toggle" aria-label="Toggle menu" aria-controls="site-nav-menu" aria-expanded="false">
 				<span></span><span></span><span></span>
 			</label>
 		</nav>
@@ -92,6 +93,7 @@
 			<p>Nicket Uttarwar · <a href="about/">About</a> · <a href="about/#heritage">Heritage</a> · <a href="experience/">Experience</a> · <a href="life/">Nicket's Life</a> · <a href="contact/">Contact</a></p>
 		</div>
 	</footer>
+	<script defer src="js/nav-mobile.js"></script>
 	<script defer src="js/portfolio-images.js"></script>
 </body>
 </html>

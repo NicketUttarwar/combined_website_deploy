@@ -18,7 +18,13 @@ PAGES = [
     "/sitemap.xml",
     "/llms.txt",
 ]
-ASSETS = ["/css/style.css", "/images/logo.png", "/uttarwarart/data/art-index.json"]
+ASSETS = [
+    "/css/style.css",
+    "/js/nav-mobile.js",
+    "/js/portfolio-images.js",
+    "/images/logo.png",
+    "/uttarwarart/data/art-index.json",
+]
 
 def main():
     ok = True
