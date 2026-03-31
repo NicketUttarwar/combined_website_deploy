@@ -15,6 +15,9 @@ const SCREENS_PER_PIECE = 3;
 const FLY_IN_RATIO = 0.32;
 const HOLD_RATIO = 0.36;
 const FLY_OUT_RATIO = 1 - FLY_IN_RATIO - HOLD_RATIO;
+const SCROLL_TRAVEL_MULTIPLIER = 2.25;
+const NAV_SCROLL_DURATION_MULTIPLIER = 0.45;
+const ARTWORK_MAX_HEIGHT = 3.75;
 
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -22,6 +25,10 @@ function easeInOutCubic(t) {
 
 function clamp(x, a, b) {
   return Math.max(a, Math.min(b, x));
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 /** Return off-screen direction for section index (cycle left/right/top/bottom) */
@@ -76,11 +83,24 @@ async function init() {
 
   const viewport = { width: window.innerWidth, height: window.innerHeight };
   const scrollSpacer = document.getElementById('scroll-spacer');
+  const aboutSection = document.getElementById('about');
+  const aboutIntro = aboutSection?.querySelector('.about-intro');
+  const cultureBlocks = aboutSection ? [...aboutSection.querySelectorAll('.culture-block')] : [];
+  const getScrollUnit = () => window.innerHeight / SCROLL_TRAVEL_MULTIPLIER;
+  function updateLayoutHeights() {
+    const scrollUnit = getScrollUnit();
+    if (aboutSection) aboutSection.style.minHeight = `${ABOUT_VIEWPORTS * scrollUnit}px`;
+    if (aboutIntro) aboutIntro.style.minHeight = `${0.5 * scrollUnit}px`;
+    cultureBlocks.forEach((block) => {
+      block.style.minHeight = `${scrollUnit}px`;
+    });
+  }
   function updateScrollHeight() {
-    const screenH = window.innerHeight;
+    const screenH = getScrollUnit();
     const artworkHeight = artIndex.length * SCREENS_PER_PIECE * screenH;
     scrollSpacer.style.height = artworkHeight + 'px';
   }
+  updateLayoutHeights();
   updateScrollHeight();
 
   const scene = new THREE.Scene();
@@ -107,10 +127,10 @@ async function init() {
     const ch = piece.composite_height_px;
     const compositeAspect = cw / ch;
     const viewAspect = viewport.width / viewport.height;
-    let scaleH = 1.8;
-    let scaleW = 1.8 * compositeAspect;
-    if (scaleW > 1.8 * viewAspect) {
-      scaleW = 1.8 * viewAspect;
+    let scaleH = ARTWORK_MAX_HEIGHT;
+    let scaleW = ARTWORK_MAX_HEIGHT * compositeAspect;
+    if (scaleW > ARTWORK_MAX_HEIGHT * viewAspect) {
+      scaleW = ARTWORK_MAX_HEIGHT * viewAspect;
       scaleH = scaleW / compositeAspect;
     }
     const offDist = 2.2;
@@ -186,33 +206,113 @@ async function init() {
   };
   const aboutLabels = ['Mumbai', 'London', 'San Francisco'];
   aboutLabels.forEach((label, i) => {
-    const dot = document.createElement('div');
+    const dot = document.createElement('button');
+    dot.type = 'button';
     dot.className = 'dot dot-about';
     dot.setAttribute('data-section', 'about');
     dot.setAttribute('data-culture', i);
     dot.setAttribute('title', label);
+    dot.setAttribute('aria-label', `Scroll to ${label} section`);
     dotsAboutEl.appendChild(dot);
   });
   artIndex.forEach((piece, i) => {
-    const dot = document.createElement('div');
+    const dot = document.createElement('button');
+    dot.type = 'button';
     dot.className = 'dot';
     dot.setAttribute('data-index', i);
     dot.setAttribute('title', piece.food || '');
+    dot.setAttribute('aria-label', `Scroll to artwork ${i + 1}${piece.food ? `: ${piece.food}` : ''}`);
     dotsArtworksEl.appendChild(dot);
   });
 
-  const aboutHeight = () => ABOUT_VIEWPORTS * window.innerHeight;
+  const aboutHeight = () => ABOUT_VIEWPORTS * getScrollUnit();
 
   function getTotalScrollHeight() {
-    const screenH = window.innerHeight;
+    const screenH = getScrollUnit();
     const aboutPx = ABOUT_VIEWPORTS * screenH;
     const artworkPx = artIndex.length * SCREENS_PER_PIECE * screenH;
     return aboutPx + artworkPx;
   }
 
+  let activeAutoScroll = null;
+
+  function stopAutoScroll() {
+    if (!activeAutoScroll) return;
+    cancelAnimationFrame(activeAutoScroll.rafId);
+    activeAutoScroll = null;
+  }
+
+  function easeScrollTo(targetY) {
+    const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 0);
+    const finalTargetY = clamp(targetY, 0, maxScroll);
+
+    if (prefersReducedMotion()) {
+      stopAutoScroll();
+      window.scrollTo(0, finalTargetY);
+      return;
+    }
+
+    const startY = window.scrollY;
+    const distance = finalTargetY - startY;
+    if (Math.abs(distance) < 2) {
+      window.scrollTo(0, finalTargetY);
+      return;
+    }
+
+    stopAutoScroll();
+    const duration = clamp((450 + Math.abs(distance) * 0.2) * NAV_SCROLL_DURATION_MULTIPLIER, 180, 700);
+    const startTime = performance.now();
+
+    const step = (now) => {
+      if (!activeAutoScroll) return;
+      const elapsed = now - startTime;
+      const progress = clamp(elapsed / duration, 0, 1);
+      const eased = easeInOutCubic(progress);
+      window.scrollTo(0, startY + distance * eased);
+
+      if (progress < 1) {
+        activeAutoScroll.rafId = requestAnimationFrame(step);
+      } else {
+        window.scrollTo(0, finalTargetY);
+        activeAutoScroll = null;
+      }
+    };
+
+    activeAutoScroll = { rafId: requestAnimationFrame(step) };
+  }
+
+  function getAboutTargetScroll(cultureIndex) {
+    const blockCenters = [1, 2, 3];
+    return blockCenters[cultureIndex] * getScrollUnit();
+  }
+
+  function getArtworkTargetScroll(pieceIndex) {
+    const holdCenterRatio = FLY_IN_RATIO + HOLD_RATIO / 2;
+    return aboutHeight() + pieceIndex * SCREENS_PER_PIECE * getScrollUnit()
+      + holdCenterRatio * SCREENS_PER_PIECE * getScrollUnit();
+  }
+
+  function bindNavigatorClicks() {
+    dotsAboutEl.querySelectorAll('.dot').forEach((dot) => {
+      dot.addEventListener('click', () => {
+        const cultureIndex = Number(dot.getAttribute('data-culture'));
+        if (Number.isNaN(cultureIndex)) return;
+        easeScrollTo(getAboutTargetScroll(cultureIndex));
+      });
+    });
+
+    dotsArtworksEl.querySelectorAll('.dot').forEach((dot) => {
+      dot.addEventListener('click', () => {
+        const pieceIndex = Number(dot.getAttribute('data-index'));
+        if (Number.isNaN(pieceIndex)) return;
+        easeScrollTo(getArtworkTargetScroll(pieceIndex));
+      });
+    });
+  }
+
   function getScrollState() {
     const scrollY = window.scrollY;
-    const screenH = window.innerHeight;
+    const screenH = getScrollUnit();
     const aboutHeightPx = aboutHeight();
     const artworkScroll = scrollY - aboutHeightPx;
     const segment = SCREENS_PER_PIECE * screenH;
@@ -377,6 +477,7 @@ async function init() {
   function onResize() {
     viewport.width = window.innerWidth;
     viewport.height = window.innerHeight;
+    updateLayoutHeights();
     updateScrollHeight();
     updateAboutSection(getScrollState());
     renderer.setSize(viewport.width, viewport.height);
@@ -391,6 +492,14 @@ async function init() {
 
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onResize);
+  window.addEventListener('wheel', stopAutoScroll, { passive: true });
+  window.addEventListener('touchstart', stopAutoScroll, { passive: true });
+  window.addEventListener('keydown', (event) => {
+    if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', 'Space'].includes(event.code)) {
+      stopAutoScroll();
+    }
+  });
+  bindNavigatorClicks();
   onResize();
   onScroll();
 
