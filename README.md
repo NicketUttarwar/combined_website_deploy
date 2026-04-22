@@ -2,6 +2,8 @@
 
 This repository deploys **one static website**: a **single S3 bucket** (with **static website hosting** enabled), **one CloudFront distribution** that uses the bucket’s **`s3-website-…` HTTP origin** (not the S3 REST API), and **TLS from AWS Certificate Manager** for **nicketuttarwar.com** with **apex and `www`** by default. Site files live under **`combined/`** in this repo (synced to the bucket root). **DNS stays at your registrar**—this guide uses **Network Solutions** as the example; the same record types apply at any DNS host.
 
+> **Quick note for future content edits:** once infrastructure is already set up, redeploying website file changes only requires running **`aws login`** and then continuing from **Step 12**.
+
 ---
 
 ## Table of contents

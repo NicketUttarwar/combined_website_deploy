@@ -400,7 +400,39 @@
       animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #loading .text { font-size: 0.85rem; letter-spacing: 0.15em; opacity: 0.8; }
+    #loading .text {
+      font-size: 0.85rem;
+      letter-spacing: 0.15em;
+      opacity: 0.9;
+      text-align: center;
+      max-width: min(92vw, 46rem);
+      line-height: 1.65;
+      padding: 0 1.25rem;
+    }
+    #loading .notice {
+      display: block;
+      margin-top: 0.5rem;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: none;
+      opacity: 0.85;
+    }
+    #loading .poem {
+      margin-top: 0.85rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.03em;
+      opacity: 0.75;
+      line-height: 1.8;
+      text-transform: none;
+    }
+    #loading .poem-intro {
+      display: block;
+      margin-top: 0.85rem;
+      font-size: 0.74rem;
+      letter-spacing: 0.06em;
+      opacity: 0.82;
+      text-transform: none;
+    }
 
     /* ——— Culinary carousel: edge-to-edge, continuous scroll ——— */
     #culinary-carousel {
@@ -578,9 +610,23 @@
   <noscript>
     <p style="padding:1rem 1.5rem;background:#12121a;color:#e8e6e3;font-family:'Outfit',sans-serif;line-height:1.6;max-width:52ch;margin:0 auto;">Uttarwar Art is an interactive portfolio; full experience uses JavaScript. For machine-readable artwork titles, food pairings, and file structure, use <a href="data/art-index.json" style="color:#c4b5fd;">art-index.json</a>. Return to <a href="../" style="color:#c4b5fd;">Nicket Uttarwar — main site</a>.</p>
   </noscript>
-  <div id="loading">
+  <div id="loading" role="status" aria-live="polite">
     <div class="spinner" aria-hidden="true"></div>
-    <span class="text">Loading portfolio</span>
+    <div class="text">
+      <span>Loading portfolio assets</span>
+      <span class="notice">This generally takes around 30 seconds because many art files are being prepared. Thank you for your patience while it loads.</span>
+      <span class="poem-intro">While you wait, enjoy this poem about the similarities between writing code and creating art.</span>
+      <p class="poem">
+        We draft with brush and bracket, line by line, by line.<br>
+        In pigment and in syntax, form becomes design.<br>
+        A function, like a stanza, turns intent to shape.<br>
+        A canvas and a compiler both refuse escape.<br>
+        We edit for precision, cadence, tone, and flow.<br>
+        We test each stroke and statement till the meanings glow.<br>
+        From blankness into structure, both arts learn to see.<br>
+        In code and crafted image, thought becomes set free.
+      </p>
+    </div>
   </div>
 
   <section id="culinary-carousel" tabindex="-1" aria-label="Culinary journey: kitchen tools">
